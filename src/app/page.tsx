@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Calendar, Grid3X3, List } from 'lucide-react'
+import { Grid3X3, List, ArrowLeftRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -60,16 +60,15 @@ export default function Home() {
             </CardContent>
           </Card>
 
-          {/* Calendar View Card */}
+          {/* View Switcher Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-center w-10 h-10 bg-slate-950 rounded-sm mb-4">
-                <Calendar className="w-6 h-6 text-slate-100" />
+                <ArrowLeftRight className="w-6 h-6 text-slate-100" />
               </div>
-              <CardTitle className="text-2xl">Calendar View</CardTitle>
+              <CardTitle className="text-2xl">View Switcher</CardTitle>
               <CardDescription className="text-base">
-                Traditional calendar layout for easy date navigation. 
-                Perfect for recurring events and date-focused browsing.
+                An all-in-one session view solution enabling users to switch between different viewing modes seamlessly.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">

@@ -7,6 +7,7 @@ import { Search, X } from 'lucide-react'
 
 export interface FilterState {
   search: string
+  sortBy: string
   tags: string[]
   dates: string[]
   locations: string[]
@@ -88,9 +89,17 @@ export const Filters = ({ filters, onFiltersChange, tags, dates, locations, type
     })
   }
 
+  const handleSortChange = (sortBy: string) => {
+    onFiltersChange({
+      ...filters,
+      sortBy
+    })
+  }
+
   const clearAllFilters = () => {
     onFiltersChange({
       search: '',
+      sortBy: 'date-asc',
       tags: [],
       dates: [],
       locations: [],
@@ -140,6 +149,37 @@ export const Filters = ({ filters, onFiltersChange, tags, dates, locations, type
         </div>
 
         <Accordion type="multiple" defaultValue={[]} className="w-full">
+            {/* Sort By */}
+            <AccordionItem value="sort">
+              <AccordionTrigger className="text-sm font-medium text-slate-700 hover:no-underline">
+                Sort by
+              </AccordionTrigger>
+              <AccordionContent className="space-y-3 px-0 pb-5">
+                {[
+                  { value: 'date-asc', label: 'Date (Earliest first)' },
+                  { value: 'date-desc', label: 'Date (Latest first)' },
+                  { value: 'title-asc', label: 'Title (A-Z)' },
+                  { value: 'title-desc', label: 'Title (Z-A)' },
+                  { value: 'time-asc', label: 'Time (Earliest first)' },
+                  { value: 'time-desc', label: 'Time (Latest first)' }
+                ].map((option) => (
+                  <div key={option.value} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`sort-${option.value}`}
+                      checked={filters.sortBy === option.value}
+                      onCheckedChange={() => handleSortChange(option.value)}
+                    />
+                    <label
+                      htmlFor={`sort-${option.value}`}
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                    >
+                      {option.label}
+                    </label>
+                  </div>
+                ))}
+              </AccordionContent>
+            </AccordionItem>
+
             {/* Tags */}
             <AccordionItem value="tags">
               <AccordionTrigger className="text-sm font-medium text-slate-700 hover:no-underline">

@@ -11,7 +11,7 @@ export const formatDate = (dateString: string): string => {
 }
 
 export const filterEvents = (events: Event[], filters: FilterState): Event[] => {
-  return events.filter(event => {
+  const filteredEvents = events.filter(event => {
     // Search filter
     if (filters.search.length > 0) {
       const searchTerm = filters.search.toLowerCase()
@@ -75,6 +75,73 @@ export const filterEvents = (events: Event[], filters: FilterState): Event[] => 
 
     return true
   })
+
+  // Sort the filtered events
+  return sortEvents(filteredEvents, filters.sortBy)
+}
+
+const sortEvents = (events: Event[], sortBy: string): Event[] => {
+  const sortedEvents = [...events]
+  
+  switch (sortBy) {
+    case 'date-asc':
+      return sortedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    
+    case 'date-desc':
+      return sortedEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    
+    case 'title-asc':
+      return sortedEvents.sort((a, b) => a.title.localeCompare(b.title))
+    
+    case 'title-desc':
+      return sortedEvents.sort((a, b) => b.title.localeCompare(a.title))
+    
+    case 'time-asc':
+      return sortedEvents.sort((a, b) => {
+        // Extract start time from time range (e.g., "9:00 AM - 5:00 PM" -> "9:00 AM")
+        const aStartTime = a.time.match(/^([^-\n]+)/)?.[1]?.trim() || a.time
+        const bStartTime = b.time.match(/^([^-\n]+)/)?.[1]?.trim() || b.time
+        
+        // Convert to 24-hour format for comparison
+        const aTime = convertTo24Hour(aStartTime)
+        const bTime = convertTo24Hour(bStartTime)
+        
+        return aTime - bTime
+      })
+    
+    case 'time-desc':
+      return sortedEvents.sort((a, b) => {
+        const aStartTime = a.time.match(/^([^-\n]+)/)?.[1]?.trim() || a.time
+        const bStartTime = b.time.match(/^([^-\n]+)/)?.[1]?.trim() || b.time
+        
+        const aTime = convertTo24Hour(aStartTime)
+        const bTime = convertTo24Hour(bStartTime)
+        
+        return bTime - aTime
+      })
+    
+    default:
+      return sortedEvents
+  }
+}
+
+const convertTo24Hour = (timeString: string): number => {
+  const time = timeString.trim().toLowerCase()
+  const match = time.match(/(\d+):?(\d*)\s*(am|pm)/)
+  
+  if (!match) return 0
+  
+  let hours = parseInt(match[1])
+  const minutes = match[2] ? parseInt(match[2]) : 0
+  const period = match[3]
+  
+  if (period === 'pm' && hours !== 12) {
+    hours += 12
+  } else if (period === 'am' && hours === 12) {
+    hours = 0
+  }
+  
+  return hours * 60 + minutes // Convert to minutes for easier comparison
 }
 
 export const getUniqueTags = (events: Event[]): string[] => {
@@ -95,4 +162,51 @@ export const getUniqueLocations = (events: Event[]): string[] => {
 export const getUniqueTypes = (events: Event[]): string[] => {
   const types = events.map(event => event.type).filter(Boolean) as string[]
   return [...new Set(types)].sort()
+}
+
+// Clash detection functions
+export const parseTimeRange = (timeString: string): { start: number; end: number } => {
+  const match = timeString.match(/(\d{1,2}):?(\d{2})?\s*(AM|PM)\s*-\s*(\d{1,2}):?(\d{2})?\s*(AM|PM)/i)
+  
+  if (!match) return { start: 0, end: 0 }
+  
+  const startHour = parseInt(match[1])
+  const startMinute = match[2] ? parseInt(match[2]) : 0
+  const startPeriod = match[3].toUpperCase()
+  const endHour = parseInt(match[4])
+  const endMinute = match[5] ? parseInt(match[5]) : 0
+  const endPeriod = match[6].toUpperCase()
+  
+  const start = convertTo24Hour(`${startHour}:${startMinute.toString().padStart(2, '0')} ${startPeriod}`)
+  const end = convertTo24Hour(`${endHour}:${endMinute.toString().padStart(2, '0')} ${endPeriod}`)
+  
+  return { start, end }
+}
+
+export const doSessionsClash = (session1: Event, session2: Event): boolean => {
+  // Sessions on different dates don't clash
+  if (session1.date !== session2.date) return false
+  
+  const time1 = parseTimeRange(session1.time)
+  const time2 = parseTimeRange(session2.time)
+  
+  // Check for overlap: session1 starts before session2 ends AND session2 starts before session1 ends
+  return time1.start < time2.end && time2.start < time1.end
+}
+
+export const getClashingSessions = (targetSession: Event, bookedSessions: Event[]): Event[] => {
+  return bookedSessions.filter(session => 
+    session.id !== targetSession.id && doSessionsClash(targetSession, session)
+  )
+}
+
+export const hasClashes = (bookedSessions: Event[]): boolean => {
+  for (let i = 0; i < bookedSessions.length; i++) {
+    for (let j = i + 1; j < bookedSessions.length; j++) {
+      if (doSessionsClash(bookedSessions[i], bookedSessions[j])) {
+        return true
+      }
+    }
+  }
+  return false
 } 
