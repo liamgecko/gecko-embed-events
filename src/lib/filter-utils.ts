@@ -80,15 +80,22 @@ export const filterEvents = (events: Event[], filters: FilterState): Event[] => 
   return sortEvents(filteredEvents, filters.sortBy)
 }
 
+const parseEventDateTime = (event: Event): Date => {
+  // Combine date and start time into a single Date object
+  // Assumes event.date is 'YYYY-MM-DD' and event.time is 'HH:MM AM/PM - ...'
+  const [startTime] = event.time.split(' - ')
+  return new Date(`${event.date} ${startTime}`)
+}
+
 const sortEvents = (events: Event[], sortBy: string): Event[] => {
   const sortedEvents = [...events]
   
   switch (sortBy) {
     case 'date-asc':
-      return sortedEvents.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      return sortedEvents.sort((a, b) => parseEventDateTime(a).getTime() - parseEventDateTime(b).getTime())
     
     case 'date-desc':
-      return sortedEvents.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      return sortedEvents.sort((a, b) => parseEventDateTime(b).getTime() - parseEventDateTime(a).getTime())
     
     case 'title-asc':
       return sortedEvents.sort((a, b) => a.title.localeCompare(b.title))
