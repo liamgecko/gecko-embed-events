@@ -73,7 +73,7 @@ export default function Home() {
             </CardHeader>
             <CardContent className="p-6">
               <Button asChild className="w-full">
-                <Link href="/calendar-view">
+                <Link href="/view-switcher">
                   View Demo →
                 </Link>
               </Button>
