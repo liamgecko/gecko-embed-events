@@ -354,7 +354,7 @@ export default function ViewSwitcher() {
                                 className={`overflow-hidden ${hasClash && !isBooked ? 'border-orange-300' : ''}`}
                               >
                                 {/* Image */}
-                                <div className="relative h-48">
+                                <div className="relative h-40">
                                   <Image 
                                     src={event.image || '/placeholder-image.jpg'} 
                                     alt={event.title}
@@ -378,7 +378,7 @@ export default function ViewSwitcher() {
                                 </div>
 
                                 {/* Content */}
-                                <CardContent className="p-6 flex flex-col h-full">
+                                <CardContent className="p-6 flex flex-col flex-1">
                                   <div className="flex-1">
                                     <div className="mb-3">
                                       <CardTitle className="text-base line-clamp-2 mb-2 leading-tight">
@@ -386,7 +386,7 @@ export default function ViewSwitcher() {
                                       </CardTitle>
                                     </div>
 
-                                    <p className="text-slate-600 text-sm mb-4 line-clamp-2">
+                                    <p className="text-slate-600 text-sm mb-4">
                                       {event.description}
                                     </p>
 

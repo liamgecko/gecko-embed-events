@@ -182,16 +182,16 @@ export default function GridView() {
                         return (
                           <Card 
                             key={event.id}
-                            className={`overflow-hidden ${hasClash && !isBooked ? 'border-orange-300' : ''}`}
+                            className={`h-full overflow-hidden ${hasClash && !isBooked ? 'border-orange-300' : ''}`}
                           >
                             {/* Image */}
-                                                            <div className="relative h-48">
-                                  <Image 
-                                    src={event.image || '/placeholder-image.jpg'} 
-                                    alt={event.title}
-                                    fill
-                                    className={`object-cover ${event.attendees === 0 && !event.waitlistSpaces ? 'opacity-50' : ''}`}
-                                  />
+                            <div className="relative h-40">
+                              <Image 
+                                src={event.image || '/placeholder-image.jpg'} 
+                                alt={event.title}
+                                fill
+                                className={`object-cover ${event.attendees === 0 && !event.waitlistSpaces ? 'opacity-50' : ''}`}
+                              />
                               {/* Status Badge */}
                               {event.attendees === 0 && (
                                 <div className="absolute top-3 left-3">
@@ -209,7 +209,7 @@ export default function GridView() {
                             </div>
 
                             {/* Content */}
-                            <CardContent className="p-6 flex flex-col h-full">
+                            <CardContent className="p-6 flex flex-col flex-1">
                               <div className="flex-1">
                                 <div className="mb-3">
                                   <CardTitle className="text-base line-clamp-2 mb-2 leading-tight">
@@ -217,7 +217,7 @@ export default function GridView() {
                                   </CardTitle>
                                 </div>
 
-                                <p className="text-slate-600 text-sm mb-4 line-clamp-2">
+                                <p className="text-slate-600 text-sm mb-4">
                                   {event.description}
                                 </p>
 
