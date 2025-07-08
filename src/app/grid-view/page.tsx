@@ -358,9 +358,7 @@ export default function GridView() {
                                       ? event.waitlistSpaces
                                         ? "Join waitlist"
                                         : "Session full"
-                                      : event.isMultiTime
-                                        ? "Select time slot"
-                                        : "Add to booking"
+                                      : "Add to booking"
                                   }
                                 </Button>
                               )}

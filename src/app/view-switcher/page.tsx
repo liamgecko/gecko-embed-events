@@ -389,7 +389,7 @@ export default function ViewSwitcher() {
                                       }
                                     }}
                                   >
-                                    {isSessionFull(event) ? "Join waitlist" : event.isMultiTime ? "Select time slot" : "Add to booking"}
+                                    {isSessionFull(event) ? "Join waitlist" : "Add to booking"}
                                   </Button>
                                 </div>
                               )}
@@ -521,9 +521,7 @@ export default function ViewSwitcher() {
                                         ? event.waitlistSpaces 
                                           ? "Join waitlist" 
                                           : "Session full"
-                                        : event.isMultiTime
-                                          ? "Select time slot"
-                                          : "Add to booking"
+                                        : "Add to booking"
                                     }
                                   </Button>
                                 </CardContent>

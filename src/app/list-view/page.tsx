@@ -333,9 +333,7 @@ export default function ListView() {
                                     ? "Remove from booking" 
                                     : isSessionFull(event) 
                                       ? "Join waitlist" 
-                                      : event.isMultiTime
-                                        ? "Select time slot"
-                                        : "Add to booking"
+                                      : "Add to booking"
                                   }
                                 </Button>
                             </div>
