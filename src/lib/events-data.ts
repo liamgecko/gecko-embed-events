@@ -38,6 +38,17 @@ export interface Event {
   image?: string
   tags?: string[]
   type?: string
+  // Multi-time session fields
+  isMultiTime?: boolean
+  startTime?: string
+  endTime?: string
+  timeSlotDuration?: number
+  maxAttendeesPerSlot?: number
+  availableSlots?: Array<{
+    time: string
+    attendees: number
+    maxAttendees: number
+  }>
 }
 
 export const events: Event[] = [
@@ -59,15 +70,29 @@ export const events: Event[] = [
     id: 2,
     title: "Campus Tour",
     date: "2025-06-14",
-    time: "10:15 AM - 11:15 AM",
+    time: "10:00 AM - 5:00 PM",
     location: "Student Union Entrance",
-    attendees: 60,
+    attendees: 0,
     price: "Free",
     category: "Tour",
-    description: "Join our student ambassadors for a guided tour of the campus facilities and key locations.",
+    description: "Join our student ambassadors for a guided tour of the campus facilities and key locations. Tours run every hour throughout the day.",
     image: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=400&h=250&fit=crop",
     tags: ["Tour", "Campus"],
-    type: "On Campus"
+    type: "On Campus",
+    isMultiTime: true,
+    startTime: "10:00 AM",
+    endTime: "5:00 PM",
+    timeSlotDuration: 60,
+    maxAttendeesPerSlot: 20,
+    availableSlots: [
+      { time: "10:00 AM", attendees: 12, maxAttendees: 20 },
+      { time: "11:00 AM", attendees: 18, maxAttendees: 20 },
+      { time: "12:00 PM", attendees: 20, maxAttendees: 20 },
+      { time: "1:00 PM", attendees: 8, maxAttendees: 20 },
+      { time: "2:00 PM", attendees: 15, maxAttendees: 20 },
+      { time: "3:00 PM", attendees: 3, maxAttendees: 20 },
+      { time: "4:00 PM", attendees: 0, maxAttendees: 20 }
+    ]
   },
   {
     id: 3,

@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Filters, FilterState } from '@/components/ui/filters'
 import { Card, CardContent, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { filterEvents, getUniqueTags, getUniqueDates, getUniqueLocations, getUniqueTypes, getClashingSessions, hasClashes } from '@/lib/filter-utils'
+import { filterEvents, getUniqueTags, getUniqueDates, getUniqueLocations, getUniqueTypes, getClashingSessions, hasClashes, getTotalAvailableSlots, areAllSlotsFull } from '@/lib/filter-utils'
 import { events, eventInfo } from '@/lib/events-data'
 import { useState } from 'react'
 import BookingToast from '@/components/ui/booking-toast'
@@ -17,6 +17,12 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import SessionDetailModal from '@/components/ui/session-detail-modal'
+
+// Define the booking structure
+interface BookedSession {
+  eventId: number
+  selectedTimeSlot?: string
+}
 
 export default function ViewSwitcher() {
   const [filters, setFilters] = useState<FilterState>({
@@ -28,23 +34,30 @@ export default function ViewSwitcher() {
     types: [],
     startTimes: []
   })
-  const [bookedSessions, setBookedSessions] = useState<Set<number>>(new Set())
+  const [bookedSessions, setBookedSessions] = useState<BookedSession[]>([])
   const [activeTab, setActiveTab] = useState("sessions")
   const [hideFullSessions, setHideFullSessions] = useState(false)
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const handleAddToBooking = (eventId: number) => {
-    setBookedSessions(prev => new Set([...prev, eventId]))
+  const handleAddToBooking = (eventId: number, selectedTimeSlot?: string) => {
+    setBookedSessions(prev => {
+      // Check if already booked
+      const existingIndex = prev.findIndex(booking => booking.eventId === eventId)
+      if (existingIndex >= 0) {
+        // Update existing booking with new time slot if provided
+        const updated = [...prev]
+        updated[existingIndex] = { eventId, selectedTimeSlot }
+        return updated
+      }
+      // Add new booking
+      return [...prev, { eventId, selectedTimeSlot }]
+    })
   }
 
   const handleRemoveFromBooking = (eventId: number) => {
-    setBookedSessions(prev => {
-      const newSet = new Set(prev)
-      newSet.delete(eventId)
-      return newSet
-    })
+    setBookedSessions(prev => prev.filter(booking => booking.eventId !== eventId))
   }
 
   const handleProceedToBooking = () => {
@@ -61,6 +74,33 @@ export default function ViewSwitcher() {
     setSelectedEvent(null)
   }
 
+  // Helper function to check if a session is full (handles multi-time sessions)
+  const isSessionFull = (event: typeof events[0]) => {
+    if (event.isMultiTime) {
+      return getTotalAvailableSlots(event) === 0
+    }
+    return event.attendees === 0 && !event.waitlistSpaces
+  }
+
+  // Helper function to check if a session should be visually grayed out
+  const shouldGrayOut = (event: typeof events[0]) => {
+    if (event.isMultiTime) {
+      return areAllSlotsFull(event)
+    }
+    return event.attendees === 0 && !event.waitlistSpaces
+  }
+
+  // Helper function to check if an event is booked
+  const isEventBooked = (eventId: number) => {
+    return bookedSessions.some(booking => booking.eventId === eventId)
+  }
+
+  // Helper function to get selected time slot for an event
+  const getSelectedTimeSlot = (eventId: number) => {
+    const booking = bookedSessions.find(booking => booking.eventId === eventId)
+    return booking?.selectedTimeSlot
+  }
+
   const tags = getUniqueTags(events)
   const dates = getUniqueDates(events)
   const locations = getUniqueLocations(events)
@@ -69,7 +109,7 @@ export default function ViewSwitcher() {
   
   // Filter out full sessions if switch is enabled
   const displayEvents = hideFullSessions 
-    ? filteredEvents.filter(event => event.attendees > 0 || event.waitlistSpaces)
+    ? filteredEvents.filter(event => !isSessionFull(event) || event.waitlistSpaces)
     : filteredEvents
   return (
     <div className="min-h-screen">
@@ -247,18 +287,22 @@ export default function ViewSwitcher() {
                       ) : (
                         <div className="space-y-4">
                           {displayEvents.map((event) => {
-                            const isBooked = bookedSessions.has(event.id)
-                            const bookedEvents = events.filter(e => bookedSessions.has(e.id))
-                            const clashingSessions = getClashingSessions(event, bookedEvents)
+                            const isBooked = isEventBooked(event.id)
+                            const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                            const bookedSessionsWithSlots = bookedSessions.map(booking => ({
+                              event: events.find(e => e.id === booking.eventId)!,
+                              selectedTimeSlot: booking.selectedTimeSlot
+                            }))
+                            const clashingSessions = getClashingSessions(event, bookedSessionsWithSlots, selectedTimeSlot)
                             const hasClash = clashingSessions.length > 0
                             return (
                               <div 
                                 key={event.id} 
-                                className={`flex items-center justify-between p-4 border rounded-lg ${
-                                  hasClash && !isBooked ? 'border-orange-300 bg-orange-50' : 
-                                  event.attendees === 0 && !event.waitlistSpaces ? 'border-slate-200 bg-slate-50' :
-                                  'border-slate-200'
-                                }`}
+                                                            className={`flex items-center justify-between p-4 border rounded-lg ${
+                              hasClash && !isBooked ? 'border-orange-300 bg-orange-50' : 
+                              shouldGrayOut(event) ? 'border-slate-200 bg-slate-50' :
+                              'border-slate-200'
+                            }`}
                               >
                               <div className="flex items-center gap-4">
                                 <div className="text-center">
@@ -297,11 +341,13 @@ export default function ViewSwitcher() {
                                     <div className="hidden xl:flex items-center gap-1">
                                       <Users className="w-4 h-4" />
                                       <span>
-                                        {event.attendees === 0 
-                                          ? event.waitlistSpaces 
-                                            ? `${event.waitlistSpaces} waitlist spaces` 
-                                            : "Session full"
-                                          : `${event.attendees} spaces available`
+                                        {event.isMultiTime 
+                                          ? `${getTotalAvailableSlots(event)} spaces available`
+                                          : event.attendees === 0 
+                                            ? event.waitlistSpaces 
+                                              ? `${event.waitlistSpaces} waitlist spaces` 
+                                              : "Session full"
+                                            : `${event.attendees} spaces available`
                                         }
                                       </span>
                                     </div>
@@ -309,11 +355,13 @@ export default function ViewSwitcher() {
                                   <div className="flex xl:hidden items-center gap-1 text-sm text-slate-600 mt-4">
                                     <Users className="w-4 h-4" />
                                     <span>
-                                      {event.attendees === 0 
-                                        ? event.waitlistSpaces 
-                                          ? `${event.waitlistSpaces} waitlist spaces` 
-                                          : "Session full"
-                                        : `${event.attendees} spaces available`
+                                      {event.isMultiTime 
+                                        ? `${getTotalAvailableSlots(event)} spaces available`
+                                        : event.attendees === 0 
+                                          ? event.waitlistSpaces 
+                                            ? `${event.waitlistSpaces} waitlist spaces` 
+                                            : "Session full"
+                                          : `${event.attendees} spaces available`
                                       }
                                     </span>
                                   </div>
@@ -325,22 +373,21 @@ export default function ViewSwitcher() {
                                   )}
                                 </div>
                               </div>
-                              {(event.attendees > 0 || event.waitlistSpaces) && (
+                              {(!isSessionFull(event) || event.waitlistSpaces) && (
                                 <div className="flex items-center gap-3">
                                   <Button 
                                     size="sm" 
-                                    variant={event.attendees === 0 ? "secondary" : "default"}
-                                    onClick={() => bookedSessions.has(event.id) 
-                                      ? handleRemoveFromBooking(event.id) 
-                                      : handleAddToBooking(event.id)
-                                    }
+                                    variant={isSessionFull(event) ? "secondary" : "default"}
+                                    onClick={() => {
+                                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                                      if (isSessionFull(event) && !event.waitlistSpaces) {
+                                        handleRemoveFromBooking(event.id)
+                                      } else {
+                                        handleAddToBooking(event.id, selectedTimeSlot)
+                                      }
+                                    }}
                                   >
-                                    {bookedSessions.has(event.id) 
-                                      ? "Remove from booking" 
-                                      : event.attendees === 0 
-                                        ? "Join waitlist" 
-                                        : "Add to booking"
-                                    }
+                                    {isSessionFull(event) ? "Join waitlist" : "Add to booking"}
                                   </Button>
                                 </div>
                               )}
@@ -362,9 +409,13 @@ export default function ViewSwitcher() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                           {displayEvents.map((event) => {
-                            const isBooked = bookedSessions.has(event.id)
-                            const bookedEvents = events.filter(e => bookedSessions.has(e.id))
-                            const clashingSessions = getClashingSessions(event, bookedEvents)
+                            const isBooked = isEventBooked(event.id)
+                            const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                            const bookedSessionsWithSlots = bookedSessions.map(booking => ({
+                              event: events.find(e => e.id === booking.eventId)!,
+                              selectedTimeSlot: booking.selectedTimeSlot
+                            }))
+                            const clashingSessions = getClashingSessions(event, bookedSessionsWithSlots, selectedTimeSlot)
                             const hasClash = clashingSessions.length > 0
                             return (
                               <Card 
@@ -377,10 +428,10 @@ export default function ViewSwitcher() {
                                     src={event.image || '/placeholder-image.jpg'} 
                                     alt={event.title}
                                     fill
-                                    className={`object-cover ${event.attendees === 0 && !event.waitlistSpaces ? 'opacity-50' : ''}`}
+                                    className={`object-cover ${shouldGrayOut(event) ? 'opacity-50' : ''}`}
                                   />
                                   {/* Status Badge */}
-                                  {event.attendees === 0 && (
+                                  {shouldGrayOut(event) && (
                                     <div className="absolute top-3 left-3">
                                       <Badge className={event.waitlistSpaces ? "bg-orange-100 text-orange-700 rounded-full font-bold" : "bg-pink-100 text-pink-700 rounded-full font-bold"}>
                                         {event.waitlistSpaces ? "Waitlist available" : "Session full"}
@@ -423,6 +474,11 @@ export default function ViewSwitcher() {
                                       <div className="flex items-center gap-2 text-slate-600 text-sm">
                                         <Clock className="w-4 h-4" />
                                         <span>{event.time}</span>
+                                        {event.isMultiTime && (
+                                          <Badge variant="secondary" className="text-xs ml-auto">
+                                            {getTotalAvailableSlots(event)} spaces
+                                          </Badge>
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-2 text-slate-600 text-sm">
                                         {event.type === "Online" ? (
@@ -443,20 +499,20 @@ export default function ViewSwitcher() {
                                   <Button 
                                     size="sm" 
                                     className="w-full mt-4"
-                                    variant={event.attendees === 0 ? "secondary" : isBooked ? "outline" : "default"}
-                                    disabled={event.attendees === 0 && !event.waitlistSpaces}
+                                    variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
+                                    disabled={isSessionFull(event) && !event.waitlistSpaces}
                                     onClick={() => {
-                                      if (event.attendees === 0 && !event.waitlistSpaces) return
-                                      if (isBooked) {
+                                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                                      if (isSessionFull(event) && !event.waitlistSpaces) {
                                         handleRemoveFromBooking(event.id)
                                       } else {
-                                        handleAddToBooking(event.id)
+                                        handleAddToBooking(event.id, selectedTimeSlot)
                                       }
                                     }}
                                   >
                                     {isBooked
                                       ? "Remove from booking"
-                                      : event.attendees === 0 
+                                      : isSessionFull(event) 
                                         ? event.waitlistSpaces 
                                           ? "Join waitlist" 
                                           : "Session full"
@@ -480,16 +536,17 @@ export default function ViewSwitcher() {
                 <div className="bg-white border border-slate-200 rounded-lg p-6">
                   <h3 className="text-xl font-semibold text-slate-900 mb-4">Booking form</h3>
                   <p className="text-slate-600 mb-6">
-                    {bookedSessions.size === 0 
+                    {bookedSessions.length === 0 
                       ? "No sessions selected for booking. Please add sessions from the Sessions tab."
-                      : `You have ${bookedSessions.size} session${bookedSessions.size === 1 ? '' : 's'} selected for booking.`
+                      : `You have ${bookedSessions.length} session${bookedSessions.length === 1 ? '' : 's'} selected for booking.`
                     }
                   </p>
-                  {(() => {
-                    const selectedSessions = Array.from(bookedSessions)
-                      .map(sessionId => events.find(e => e.id === sessionId))
-                      .filter(Boolean) as typeof events
-                    const hasClash = hasClashes(selectedSessions)
+                                      {(() => {
+                      const selectedSessions = bookedSessions.map(booking => ({
+                        event: events.find(e => e.id === booking.eventId)!,
+                        selectedTimeSlot: booking.selectedTimeSlot
+                      }))
+                      const hasClash = hasClashes(selectedSessions)
                     return hasClash ? (
                       <Alert className="mb-6 border-orange-200 bg-orange-50">
                         <AlertDescription className="text-orange-700">
@@ -514,7 +571,7 @@ export default function ViewSwitcher() {
                             type="text"
                             placeholder="Enter your first name"
                             className="w-full"
-                            disabled={bookedSessions.size === 0}
+                            disabled={bookedSessions.length === 0}
                           />
                         </div>
                         <div>
@@ -526,7 +583,7 @@ export default function ViewSwitcher() {
                             type="text"
                             placeholder="Enter your last name"
                             className="w-full"
-                            disabled={bookedSessions.size === 0}
+                            disabled={bookedSessions.length === 0}
                           />
                         </div>
                       </div>
@@ -540,7 +597,7 @@ export default function ViewSwitcher() {
                           type="email"
                           placeholder="Enter your email address"
                           className="w-full"
-                          disabled={bookedSessions.size === 0}
+                          disabled={bookedSessions.length === 0}
                         />
                       </div>
                       
@@ -553,19 +610,18 @@ export default function ViewSwitcher() {
                           type="tel"
                           placeholder="Enter your phone number"
                           className="w-full"
-                          disabled={bookedSessions.size === 0}
+                          disabled={bookedSessions.length === 0}
                         />
                       </div>
                     </div>
                     
                     {/* Sessions Section */}
-                    {bookedSessions.size > 0 && (
+                    {bookedSessions.length > 0 && (
                       <div className="bg-slate-50 p-4 rounded-lg">
                         <h4 className="text-sm font-medium text-slate-900 mb-4">Your itinerary</h4>
                         {(() => {
                           // Get all selected sessions and sort by date
-                          const selectedSessions = Array.from(bookedSessions)
-                            .map(sessionId => events.find(e => e.id === sessionId))
+                          const selectedSessions = bookedSessions.map(booking => events.find(e => e.id === booking.eventId))
                             .filter(Boolean)
                             .sort((a, b) => new Date(a!.date).getTime() - new Date(b!.date).getTime())
 
@@ -617,7 +673,7 @@ export default function ViewSwitcher() {
                     )}
                     
                     <div className="pt-4">
-                      <Button className="w-full" disabled={bookedSessions.size === 0}>
+                      <Button className="w-full" disabled={bookedSessions.length === 0}>
                         Complete Booking
                       </Button>
                     </div>
@@ -632,7 +688,7 @@ export default function ViewSwitcher() {
       {/* Booking Toast - Only show on Sessions tab */}
       {activeTab === "sessions" && (
         <BookingToast 
-          sessionCount={bookedSessions.size}
+          sessionCount={bookedSessions.length}
           onProceedToBooking={handleProceedToBooking}
         />
       )}
@@ -642,11 +698,17 @@ export default function ViewSwitcher() {
         event={selectedEvent}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onAddToBooking={handleAddToBooking}
+        onAddToBooking={(eventId, selectedTimeSlot) => handleAddToBooking(eventId, selectedTimeSlot)}
         onRemoveFromBooking={handleRemoveFromBooking}
-        isBooked={selectedEvent ? bookedSessions.has(selectedEvent.id) : false}
-        hasClash={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))).length > 0 : false}
-        clashingSessions={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))) : []}
+        isBooked={selectedEvent ? isEventBooked(selectedEvent.id) : false}
+        hasClash={selectedEvent ? getClashingSessions(selectedEvent, bookedSessions.map(booking => ({
+          event: events.find(e => e.id === booking.eventId)!,
+          selectedTimeSlot: booking.selectedTimeSlot
+        })), getSelectedTimeSlot(selectedEvent.id)).length > 0 : false}
+        clashingSessions={selectedEvent ? getClashingSessions(selectedEvent, bookedSessions.map(booking => ({
+          event: events.find(e => e.id === booking.eventId)!,
+          selectedTimeSlot: booking.selectedTimeSlot
+        })), getSelectedTimeSlot(selectedEvent.id)) : []}
       />
     </div>
   )

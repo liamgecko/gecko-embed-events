@@ -190,30 +190,84 @@ export const parseTimeRange = (timeString: string): { start: number; end: number
   return { start, end }
 }
 
-export const doSessionsClash = (session1: Event, session2: Event): boolean => {
+// New function to parse a single time slot (e.g., "10:00 AM" -> start and end times)
+export const parseTimeSlot = (timeSlot: string, duration: number = 60): { start: number; end: number } => {
+  const start = convertTo24Hour(timeSlot)
+  const end = start + duration // duration in minutes
+  return { start, end }
+}
+
+// New function to get the effective time range for clash detection
+export const getEffectiveTimeRange = (event: Event, selectedTimeSlot?: string): { start: number; end: number } => {
+  // If it's a multi-time session and a time slot is selected, use that specific slot
+  if (event.isMultiTime && selectedTimeSlot && event.timeSlotDuration) {
+    return parseTimeSlot(selectedTimeSlot, event.timeSlotDuration)
+  }
+  
+  // Otherwise, use the full time range
+  return parseTimeRange(event.time)
+}
+
+export const doSessionsClash = (session1: Event, session2: Event, selectedTimeSlot1?: string, selectedTimeSlot2?: string): boolean => {
   // Sessions on different dates don't clash
   if (session1.date !== session2.date) return false
   
-  const time1 = parseTimeRange(session1.time)
-  const time2 = parseTimeRange(session2.time)
+  const time1 = getEffectiveTimeRange(session1, selectedTimeSlot1)
+  const time2 = getEffectiveTimeRange(session2, selectedTimeSlot2)
   
   // Check for overlap: session1 starts before session2 ends AND session2 starts before session1 ends
   return time1.start < time2.end && time2.start < time1.end
 }
 
-export const getClashingSessions = (targetSession: Event, bookedSessions: Event[]): Event[] => {
-  return bookedSessions.filter(session => 
-    session.id !== targetSession.id && doSessionsClash(targetSession, session)
-  )
+export const getClashingSessions = (targetSession: Event, bookedSessions: Array<{ event: Event; selectedTimeSlot?: string }>, targetSelectedTimeSlot?: string): Event[] => {
+  return bookedSessions
+    .filter(({ event }) => event.id !== targetSession.id)
+    .filter(({ event, selectedTimeSlot }) => 
+      doSessionsClash(targetSession, event, targetSelectedTimeSlot, selectedTimeSlot)
+    )
+    .map(({ event }) => event)
 }
 
-export const hasClashes = (bookedSessions: Event[]): boolean => {
+export const hasClashes = (bookedSessions: Array<{ event: Event; selectedTimeSlot?: string }>): boolean => {
   for (let i = 0; i < bookedSessions.length; i++) {
     for (let j = i + 1; j < bookedSessions.length; j++) {
-      if (doSessionsClash(bookedSessions[i], bookedSessions[j])) {
+      if (doSessionsClash(
+        bookedSessions[i].event, 
+        bookedSessions[j].event, 
+        bookedSessions[i].selectedTimeSlot, 
+        bookedSessions[j].selectedTimeSlot
+      )) {
         return true
       }
     }
   }
   return false
+}
+
+// Multi-time session utility functions
+export const getTotalAvailableSlots = (event: Event): number => {
+  if (!event.isMultiTime || !event.availableSlots) return 0
+  return event.availableSlots.reduce((total, slot) => {
+    return total + Math.max(0, slot.maxAttendees - slot.attendees)
+  }, 0)
+}
+
+export const getTotalSlots = (event: Event): number => {
+  if (!event.isMultiTime || !event.availableSlots) return 0
+  return event.availableSlots.reduce((total, slot) => total + slot.maxAttendees, 0)
+}
+
+export const getAvailableSlotsCount = (event: Event): number => {
+  if (!event.isMultiTime || !event.availableSlots) return 0
+  return event.availableSlots.filter(slot => slot.attendees < slot.maxAttendees).length
+}
+
+export const getTotalSlotsCount = (event: Event): number => {
+  if (!event.isMultiTime || !event.availableSlots) return 0
+  return event.availableSlots.length
+}
+
+export const areAllSlotsFull = (event: Event): boolean => {
+  if (!event.isMultiTime || !event.availableSlots) return false
+  return event.availableSlots.every(slot => slot.attendees >= slot.maxAttendees)
 } 

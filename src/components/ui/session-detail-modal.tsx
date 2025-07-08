@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Image from "next/image"
 import { Clock, MapPin, Users, Video, Calendar, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,12 +13,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Event } from "@/lib/events-data"
+import { getTotalAvailableSlots, areAllSlotsFull } from "@/lib/filter-utils"
 
 interface SessionDetailModalProps {
   event: Event | null
   isOpen: boolean
   onClose: () => void
-  onAddToBooking: (eventId: number) => void
+  onAddToBooking: (eventId: number, selectedTimeSlot?: string) => void
   onRemoveFromBooking: (eventId: number) => void
   isBooked: boolean
   hasClash: boolean
@@ -34,17 +36,35 @@ const SessionDetailModal = ({
   hasClash,
   clashingSessions
 }: SessionDetailModalProps) => {
+  // Always call hooks first!
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isOpen) setSelectedTimeSlot(null)
+  }, [isOpen])
+
   if (!event) return null
 
   const handleBookingAction = () => {
     if (isBooked) {
       onRemoveFromBooking(event.id)
     } else {
-      onAddToBooking(event.id)
+      onAddToBooking(event.id, selectedTimeSlot || undefined)
     }
+    onClose();
   }
 
-  const isSessionFull = event.attendees === 0 && !event.waitlistSpaces
+  const handleTimeSlotSelect = (time: string) => {
+    setSelectedTimeSlot(time)
+  }
+
+  const isSessionFull = event.isMultiTime 
+    ? getTotalAvailableSlots(event) === 0 
+    : event.attendees === 0 && !event.waitlistSpaces
+
+  const shouldGrayOut = event.isMultiTime 
+    ? areAllSlotsFull(event)
+    : event.attendees === 0 && !event.waitlistSpaces
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -54,11 +74,13 @@ const SessionDetailModal = ({
           <DialogDescription className="flex items-center gap-2">
             <Users className="w-4 h-4" />
             <span>
-              {event.attendees === 0 
-                ? event.waitlistSpaces 
-                  ? `${event.waitlistSpaces} waitlist spaces` 
-                  : "Session full"
-                : `${event.attendees} spaces available`
+              {event.isMultiTime 
+                ? `${getTotalAvailableSlots(event)} spaces available`
+                : event.attendees === 0 
+                  ? event.waitlistSpaces 
+                    ? `${event.waitlistSpaces} waitlist spaces` 
+                    : "Session full"
+                  : `${event.attendees} spaces available`
               }
             </span>
           </DialogDescription>
@@ -71,10 +93,10 @@ const SessionDetailModal = ({
               src={event.image || '/placeholder-image.jpg'}
               alt={event.title}
               fill
-              className={`object-cover ${isSessionFull ? 'opacity-50' : ''}`}
+                              className={`object-cover ${shouldGrayOut ? 'opacity-50' : ''}`}
             />
             {/* Status Badge */}
-            {event.attendees === 0 && (
+            {shouldGrayOut && (
               <div className="absolute top-3 left-3">
                 <Badge 
                   className={
@@ -158,6 +180,36 @@ const SessionDetailModal = ({
               </div>
             )}
 
+            {/* Time Slots for Multi-Time Sessions */}
+            {event.isMultiTime && event.availableSlots && (
+              <div>
+                <h4 className="font-semibold text-slate-900 mb-3 text-sm">Available time slots</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  {event.availableSlots.map((slot, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => slot.attendees < slot.maxAttendees && handleTimeSlotSelect(slot.time)}
+                      className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                        slot.attendees >= slot.maxAttendees 
+                          ? 'border-slate-200 bg-slate-50 text-slate-400 cursor-not-allowed' 
+                          : selectedTimeSlot === slot.time
+                            ? 'border-slate-900 bg-slate-100 text-slate-900'
+                            : 'border-slate-200 hover:border-slate-900 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="text-sm font-medium">{slot.time}</div>
+                      <div className="text-xs text-slate-600">
+                        {slot.attendees >= slot.maxAttendees 
+                          ? 'Full' 
+                          : `${slot.maxAttendees - slot.attendees} spaces available`
+                        }
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Clash Warning */}
             {hasClash && !isBooked && (
               <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
@@ -185,11 +237,23 @@ const SessionDetailModal = ({
         <div className="flex gap-3 p-4 border-t sticky bottom-0 bg-white">
           <Button
             onClick={handleBookingAction}
-            disabled={isSessionFull}
+            disabled={
+              (isSessionFull && !event.waitlistSpaces) || 
+              (event.isMultiTime && !selectedTimeSlot)
+            }
             className="flex-1"
             variant={isBooked ? "outline" : "default"}
           >
-            {isBooked ? "Remove from Booking" : "Add to Booking"}
+            {isBooked 
+              ? "Remove from Booking" 
+              : isSessionFull
+                ? event.waitlistSpaces
+                  ? "Join Waitlist"
+                  : "Session Full"
+                : event.isMultiTime && !selectedTimeSlot
+                  ? "Select a time slot"
+                  : "Add to Booking"
+            }
           </Button>
           <Button variant="outline" onClick={onClose}>
             Close
