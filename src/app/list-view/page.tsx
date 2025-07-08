@@ -315,21 +315,29 @@ export default function ListView() {
                           </div>
                           {(!isSessionFull(event) || event.waitlistSpaces) && (
                             <div className="flex items-center gap-3">
-                              <Button 
-                                size="sm" 
-                                variant={isSessionFull(event) ? "secondary" : "default"}
-                                onClick={() => isEventBooked(event.id) 
-                                  ? handleRemoveFromBooking(event.id) 
-                                  : handleAddToBooking(event.id)
-                                }
-                              >
-                                {isEventBooked(event.id) 
-                                  ? "Remove from booking" 
-                                  : isSessionFull(event) 
-                                    ? "Join waitlist" 
-                                    : "Add to booking"
-                                }
-                              </Button>
+                                                              <Button 
+                                  size="sm" 
+                                  variant={isSessionFull(event) ? "secondary" : "default"}
+                                  onClick={() => {
+                                    if (isEventBooked(event.id)) {
+                                      handleRemoveFromBooking(event.id)
+                                    } else if (event.isMultiTime) {
+                                      // For multi-time sessions, open modal to select time slot
+                                      handleOpenModal(event)
+                                    } else {
+                                      handleAddToBooking(event.id)
+                                    }
+                                  }}
+                                >
+                                  {isEventBooked(event.id) 
+                                    ? "Remove from booking" 
+                                    : isSessionFull(event) 
+                                      ? "Join waitlist" 
+                                      : event.isMultiTime
+                                        ? "Select time slot"
+                                        : "Add to booking"
+                                  }
+                                </Button>
                             </div>
                           )}
                         </div>

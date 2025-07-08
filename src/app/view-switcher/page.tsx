@@ -379,15 +379,17 @@ export default function ViewSwitcher() {
                                     size="sm" 
                                     variant={isSessionFull(event) ? "secondary" : "default"}
                                     onClick={() => {
-                                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
                                       if (isSessionFull(event) && !event.waitlistSpaces) {
                                         handleRemoveFromBooking(event.id)
+                                      } else if (event.isMultiTime) {
+                                        // For multi-time sessions, open modal to select time slot
+                                        handleOpenModal(event)
                                       } else {
-                                        handleAddToBooking(event.id, selectedTimeSlot)
+                                        handleAddToBooking(event.id)
                                       }
                                     }}
                                   >
-                                    {isSessionFull(event) ? "Join waitlist" : "Add to booking"}
+                                    {isSessionFull(event) ? "Join waitlist" : event.isMultiTime ? "Select time slot" : "Add to booking"}
                                   </Button>
                                 </div>
                               )}
@@ -502,11 +504,14 @@ export default function ViewSwitcher() {
                                     variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
                                     disabled={isSessionFull(event) && !event.waitlistSpaces}
                                     onClick={() => {
-                                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
-                                      if (isSessionFull(event) && !event.waitlistSpaces) {
+                                      if (isSessionFull(event) && !event.waitlistSpaces) return
+                                      if (isBooked) {
                                         handleRemoveFromBooking(event.id)
+                                      } else if (event.isMultiTime) {
+                                        // For multi-time sessions, open modal to select time slot
+                                        handleOpenModal(event)
                                       } else {
-                                        handleAddToBooking(event.id, selectedTimeSlot)
+                                        handleAddToBooking(event.id)
                                       }
                                     }}
                                   >
@@ -516,7 +521,9 @@ export default function ViewSwitcher() {
                                         ? event.waitlistSpaces 
                                           ? "Join waitlist" 
                                           : "Session full"
-                                        : "Add to booking"
+                                        : event.isMultiTime
+                                          ? "Select time slot"
+                                          : "Add to booking"
                                     }
                                   </Button>
                                 </CardContent>

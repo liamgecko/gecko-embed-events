@@ -344,6 +344,9 @@ export default function GridView() {
                                     if (isSessionFull(event) && !event.waitlistSpaces) return
                                     if (isBooked) {
                                       handleRemoveFromBooking(event.id)
+                                    } else if (event.isMultiTime) {
+                                      // For multi-time sessions, open modal to select time slot
+                                      handleOpenModal(event)
                                     } else {
                                       handleAddToBooking(event.id)
                                     }
@@ -355,7 +358,9 @@ export default function GridView() {
                                       ? event.waitlistSpaces
                                         ? "Join waitlist"
                                         : "Session full"
-                                      : "Add to booking"
+                                      : event.isMultiTime
+                                        ? "Select time slot"
+                                        : "Add to booking"
                                   }
                                 </Button>
                               )}
