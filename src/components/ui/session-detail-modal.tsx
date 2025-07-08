@@ -42,16 +42,8 @@ const SessionDetailModal = ({
   useEffect(() => {
     if (!isOpen) {
       setSelectedTimeSlot(null)
-    } else if (event?.isMultiTime) {
-      // Auto-scroll to time slots section when modal opens for multi-time sessions
-      setTimeout(() => {
-        const timeSlotsSection = document.querySelector('[data-time-slots-section]')
-        if (timeSlotsSection) {
-          timeSlotsSection.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-      }, 100)
     }
-  }, [isOpen, event])
+  }, [isOpen])
 
   if (!event) return null
 
@@ -192,7 +184,7 @@ const SessionDetailModal = ({
 
             {/* Time Slots for Multi-Time Sessions */}
             {event.isMultiTime && event.availableSlots && (
-              <div data-time-slots-section>
+              <div>
                 <h4 className="font-semibold text-slate-900 mb-3 text-sm">Available time slots</h4>
                 <div className="grid grid-cols-2 gap-2">
                   {event.availableSlots.map((slot, index) => (

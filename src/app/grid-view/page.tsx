@@ -314,11 +314,11 @@ export default function GridView() {
                                       <Button
                                         size="sm"
                                         className="w-full mt-4"
-                                        variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
+                                        variant={isSessionFull(event) ? "secondary" : isEventBooked(event.id) ? "outline" : "default"}
                                         disabled
                                         aria-disabled
                                       >
-                                        {isBooked
+                                        {isEventBooked(event.id)
                                           ? "Remove from booking"
                                           : isSessionFull(event)
                                             ? event.waitlistSpaces
@@ -337,12 +337,12 @@ export default function GridView() {
                                 <Button
                                   size="sm"
                                   className="w-full mt-4"
-                                  variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
+                                  variant={isSessionFull(event) ? "secondary" : isEventBooked(event.id) ? "outline" : "default"}
                                   disabled={isSessionFull(event) && !event.waitlistSpaces}
                                   aria-disabled={isSessionFull(event) && !event.waitlistSpaces}
                                   onClick={() => {
                                     if (isSessionFull(event) && !event.waitlistSpaces) return
-                                    if (isBooked) {
+                                    if (isEventBooked(event.id)) {
                                       handleRemoveFromBooking(event.id)
                                     } else if (event.isMultiTime) {
                                       // For multi-time sessions, open modal to select time slot
@@ -352,7 +352,7 @@ export default function GridView() {
                                     }
                                   }}
                                 >
-                                  {isBooked
+                                  {isEventBooked(event.id)
                                     ? "Remove from booking"
                                     : isSessionFull(event)
                                       ? event.waitlistSpaces

@@ -287,7 +287,6 @@ export default function ViewSwitcher() {
                       ) : (
                         <div className="space-y-4">
                           {displayEvents.map((event) => {
-                            const isBooked = isEventBooked(event.id)
                             const selectedTimeSlot = getSelectedTimeSlot(event.id)
                             const bookedSessionsWithSlots = bookedSessions.map(booking => ({
                               event: events.find(e => e.id === booking.eventId)!,
@@ -299,7 +298,7 @@ export default function ViewSwitcher() {
                               <div 
                                 key={event.id} 
                                                             className={`flex items-center justify-between p-4 border rounded-lg ${
-                              hasClash && !isBooked ? 'border-orange-300 bg-orange-50' : 
+                              hasClash && !isEventBooked(event.id) ? 'border-orange-300 bg-orange-50' : 
                               shouldGrayOut(event) ? 'border-slate-200 bg-slate-50' :
                               'border-slate-200'
                             }`}
@@ -365,7 +364,7 @@ export default function ViewSwitcher() {
                                       }
                                     </span>
                                   </div>
-                                  {hasClash && !isBooked && (
+                                  {hasClash && !isEventBooked(event.id) && (
                                     <div className="flex items-center gap-1 text-xs text-orange-700 mt-3">
                                       <AlertTriangle className="w-4 h-4" />
                                       <span>Time clash with booked session</span>
@@ -379,7 +378,7 @@ export default function ViewSwitcher() {
                                     size="sm" 
                                     variant={isSessionFull(event) ? "secondary" : "default"}
                                     onClick={() => {
-                                      if (isSessionFull(event) && !event.waitlistSpaces) {
+                                      if (isEventBooked(event.id)) {
                                         handleRemoveFromBooking(event.id)
                                       } else if (event.isMultiTime) {
                                         // For multi-time sessions, open modal to select time slot
@@ -389,7 +388,12 @@ export default function ViewSwitcher() {
                                       }
                                     }}
                                   >
-                                    {isSessionFull(event) ? "Join waitlist" : "Add to booking"}
+                                    {isEventBooked(event.id) 
+                                      ? "Remove from booking" 
+                                      : isSessionFull(event) 
+                                        ? "Join waitlist" 
+                                        : "Add to booking"
+                                    }
                                   </Button>
                                 </div>
                               )}
@@ -411,7 +415,6 @@ export default function ViewSwitcher() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                           {displayEvents.map((event) => {
-                            const isBooked = isEventBooked(event.id)
                             const selectedTimeSlot = getSelectedTimeSlot(event.id)
                             const bookedSessionsWithSlots = bookedSessions.map(booking => ({
                               event: events.find(e => e.id === booking.eventId)!,
@@ -422,7 +425,7 @@ export default function ViewSwitcher() {
                             return (
                               <Card 
                                 key={event.id}
-                                className={`overflow-hidden ${hasClash && !isBooked ? 'border-orange-300' : ''}`}
+                                className={`overflow-hidden ${hasClash && !isEventBooked(event.id) ? 'border-orange-300' : ''}`}
                               >
                                 {/* Image */}
                                 <div className="relative h-40">
@@ -441,7 +444,7 @@ export default function ViewSwitcher() {
                                     </div>
                                   )}
                                   {/* Clash Warning Bar */}
-                                  {hasClash && !isBooked && (
+                                  {hasClash && !isEventBooked(event.id) && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-orange-100 text-orange-700 text-center py-1 px-2 text-xs font-medium">
                                       Time clash with booked session
                                     </div>
@@ -501,11 +504,11 @@ export default function ViewSwitcher() {
                                   <Button 
                                     size="sm" 
                                     className="w-full mt-4"
-                                    variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
+                                    variant={isSessionFull(event) ? "secondary" : isEventBooked(event.id) ? "outline" : "default"}
                                     disabled={isSessionFull(event) && !event.waitlistSpaces}
                                     onClick={() => {
                                       if (isSessionFull(event) && !event.waitlistSpaces) return
-                                      if (isBooked) {
+                                      if (isEventBooked(event.id)) {
                                         handleRemoveFromBooking(event.id)
                                       } else if (event.isMultiTime) {
                                         // For multi-time sessions, open modal to select time slot
@@ -515,7 +518,7 @@ export default function ViewSwitcher() {
                                       }
                                     }}
                                   >
-                                    {isBooked
+                                    {isEventBooked(event.id)
                                       ? "Remove from booking"
                                       : isSessionFull(event) 
                                         ? event.waitlistSpaces 
