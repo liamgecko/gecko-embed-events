@@ -15,7 +15,7 @@ export const eventInfo: EventInfo = {
   id: 'university-open-day-2025',
   title: 'University of Gecko Open Day 2025',
   description: 'Join us for our biggest open day of the year! Experience university life, meet academics and current students, tour our world-class facilities, and discover the perfect course for your future. With over 60 sessions across two days, there\'s something for everyone.\n\nOur open day offers a unique opportunity to explore our state-of-the-art campus, including our award-winning library, cutting-edge laboratories, and modern student accommodation. You\'ll have the chance to attend subject-specific taster sessions, meet with academic staff, and learn about our industry connections and career support services.\n\nWhether you\'re interested in Computer Science, Medicine, Business, Arts, or any of our other 50+ degree programs, our open day will help you make an informed decision about your university journey. Current students will be on hand to share their experiences, and our admissions team will be available to answer questions about applications, scholarships, and student finance.',
-  image: 'https://images.unsplash.com/photo-1523050854058-8df90110c9e1?w=1200&h=400&fit=crop',
+  image: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=1200&h=400&fit=crop&auto=format&q=80',
   date: 'June 14-15, 2025',
   location: 'University of Gecko Campus',
   organizer: 'University of Gecko',

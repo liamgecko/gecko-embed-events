@@ -17,6 +17,7 @@ import BookingToast from '@/components/ui/booking-toast'
 import { X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
+import SessionDetailModal from '@/components/ui/session-detail-modal'
 
 export default function GridView() {
   const [filters, setFilters] = useState<FilterState>({
@@ -31,6 +32,8 @@ export default function GridView() {
   const [bookedSessions, setBookedSessions] = useState<Set<number>>(new Set())
   const [activeTab, setActiveTab] = useState('sessions')
   const [hideFullSessions, setHideFullSessions] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const tags = getUniqueTags(events)
   const dates = getUniqueDates(events)
@@ -53,6 +56,16 @@ export default function GridView() {
   }
   const handleProceedToBooking = () => {
     setActiveTab('booking')
+  }
+
+  const handleOpenModal = (event: typeof events[0]) => {
+    setSelectedEvent(event)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedEvent(null)
   }
 
   return (
@@ -212,7 +225,10 @@ export default function GridView() {
                             <CardContent className="p-6 flex flex-col flex-1">
                               <div className="flex-1">
                                 <div className="mb-3">
-                                  <CardTitle className="text-base line-clamp-2 mb-2 leading-tight">
+                                  <CardTitle 
+                                    className="text-base line-clamp-2 mb-2 leading-tight cursor-pointer hover:underline"
+                                    onClick={() => handleOpenModal(event)}
+                                  >
                                     {event.title}
                                   </CardTitle>
                                 </div>
@@ -465,6 +481,18 @@ export default function GridView() {
           onProceedToBooking={handleProceedToBooking}
         />
       )}
+
+      {/* Session Detail Modal */}
+      <SessionDetailModal
+        event={selectedEvent}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddToBooking={handleAddToBooking}
+        onRemoveFromBooking={handleRemoveFromBooking}
+        isBooked={selectedEvent ? bookedSessions.has(selectedEvent.id) : false}
+        hasClash={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))).length > 0 : false}
+        clashingSessions={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))) : []}
+      />
     </div>
   )
 } 

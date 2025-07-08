@@ -13,6 +13,7 @@ import BookingToast from '@/components/ui/booking-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import SessionDetailModal from '@/components/ui/session-detail-modal'
 
 export default function ListView() {
   const [filters, setFilters] = useState<FilterState>({
@@ -27,6 +28,8 @@ export default function ListView() {
   const [bookedSessions, setBookedSessions] = useState<Set<number>>(new Set())
   const [activeTab, setActiveTab] = useState("sessions")
   const [hideFullSessions, setHideFullSessions] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const handleAddToBooking = (eventId: number) => {
     setBookedSessions(prev => new Set([...prev, eventId]))
@@ -42,6 +45,16 @@ export default function ListView() {
 
   const handleProceedToBooking = () => {
     setActiveTab("booking")
+  }
+
+  const handleOpenModal = (event: typeof events[0]) => {
+    setSelectedEvent(event)
+    setIsModalOpen(true)
+  }
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false)
+    setSelectedEvent(null)
   }
 
   const tags = getUniqueTags(events)
@@ -197,7 +210,12 @@ export default function ListView() {
                               </div>
                             </div>
                             <div>
-                              <h4 className="font-semibold text-slate-900 mb-1">{event.title}</h4>
+                              <h4 
+                                className="font-semibold text-slate-900 mb-1 cursor-pointer hover:underline"
+                                onClick={() => handleOpenModal(event)}
+                              >
+                                {event.title}
+                              </h4>
                               <div className="flex sm:flex-row flex-col items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-600">
                                 <div className="flex items-center gap-1">
                                   <Clock className="w-4 h-4" />
@@ -436,6 +454,18 @@ export default function ListView() {
           onProceedToBooking={handleProceedToBooking}
         />
       )}
+
+      {/* Session Detail Modal */}
+      <SessionDetailModal
+        event={selectedEvent}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onAddToBooking={handleAddToBooking}
+        onRemoveFromBooking={handleRemoveFromBooking}
+        isBooked={selectedEvent ? bookedSessions.has(selectedEvent.id) : false}
+        hasClash={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))).length > 0 : false}
+        clashingSessions={selectedEvent ? getClashingSessions(selectedEvent, events.filter(e => bookedSessions.has(e.id))) : []}
+      />
     </div>
   )
 } 
