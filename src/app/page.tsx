@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Grid3X3, List, ArrowLeftRight } from 'lucide-react'
+import { FileText, ArrowLeftRight } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 
@@ -17,63 +17,42 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {/* List View Card */}
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {/* Form Field Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-center w-10 h-10 bg-slate-950 rounded-sm mb-4">
-                <List className="w-6 h-6 text-slate-100" />
+                <FileText className="w-6 h-6 text-slate-100" />
               </div>
-              <CardTitle className="text-2xl">List View</CardTitle>
+              <CardTitle className="text-2xl">Form Field</CardTitle>
               <CardDescription className="text-base">
-                Clean, vertical layout perfect for detailed event information. 
-                Great for event-heavy websites with lots of details to display.
+                Comprehensive form components and field types for user registration and data collection. 
+                Perfect for collecting user information and preferences.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <Button asChild className="w-full">
-                <Link href="/list-view">
+                <Link href="/form-field">
                   View Demo →
                 </Link>
               </Button>
             </CardContent>
           </Card>
 
-          {/* Grid View Card */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-center w-10 h-10 bg-slate-950 rounded-sm mb-4">
-                <Grid3X3 className="w-6 h-6 text-slate-100" />
-              </div>
-              <CardTitle className="text-2xl">Grid View</CardTitle>
-              <CardDescription className="text-base">
-                Card-based layout that showcases events visually. 
-                Ideal for image-rich events and modern website designs.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <Button asChild className="w-full">
-                <Link href="/grid-view">
-                  View Demo →
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* View Switcher Card */}
+          {/* Embedded Event Card */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-center w-10 h-10 bg-slate-950 rounded-sm mb-4">
                 <ArrowLeftRight className="w-6 h-6 text-slate-100" />
               </div>
-              <CardTitle className="text-2xl">View Switcher</CardTitle>
+              <CardTitle className="text-2xl">Embedded Event</CardTitle>
               <CardDescription className="text-base">
                 An all-in-one session view solution enabling users to switch between different viewing modes seamlessly.
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <Button asChild className="w-full">
-                <Link href="/view-switcher">
+                <Link href="/embedded-event">
                   View Demo →
                 </Link>
               </Button>

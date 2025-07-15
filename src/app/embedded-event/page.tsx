@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import SessionDetailModal from '@/components/ui/session-detail-modal'
+import TimeSlotModal from '@/components/ui/time-slot-modal'
 
 // Define the booking structure
 interface BookedSession {
@@ -40,6 +41,7 @@ export default function ViewSwitcher() {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isTimeSlotModalOpen, setIsTimeSlotModalOpen] = useState(false)
 
   const handleAddToBooking = (eventId: number, selectedTimeSlot?: string) => {
     setBookedSessions(prev => {
@@ -71,6 +73,16 @@ export default function ViewSwitcher() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
+    setSelectedEvent(null)
+  }
+
+  const handleOpenTimeSlotModal = (event: typeof events[0]) => {
+    setSelectedEvent(event)
+    setIsTimeSlotModalOpen(true)
+  }
+
+  const handleCloseTimeSlotModal = () => {
+    setIsTimeSlotModalOpen(false)
     setSelectedEvent(null)
   }
 
@@ -381,8 +393,8 @@ export default function ViewSwitcher() {
                                       if (isEventBooked(event.id)) {
                                         handleRemoveFromBooking(event.id)
                                       } else if (event.isMultiTime) {
-                                        // For multi-time sessions, open modal to select time slot
-                                        handleOpenModal(event)
+                                        // For multi-time sessions, open time slot modal
+                                        handleOpenTimeSlotModal(event)
                                       } else {
                                         handleAddToBooking(event.id)
                                       }
@@ -479,11 +491,6 @@ export default function ViewSwitcher() {
                                       <div className="flex items-center gap-2 text-slate-600 text-sm">
                                         <Clock className="w-4 h-4" />
                                         <span>{event.time}</span>
-                                        {event.isMultiTime && (
-                                          <Badge variant="secondary" className="text-xs ml-auto">
-                                            {getTotalAvailableSlots(event)} spaces
-                                          </Badge>
-                                        )}
                                       </div>
                                       <div className="flex items-center gap-2 text-slate-600 text-sm">
                                         {event.type === "Online" ? (
@@ -511,8 +518,8 @@ export default function ViewSwitcher() {
                                       if (isEventBooked(event.id)) {
                                         handleRemoveFromBooking(event.id)
                                       } else if (event.isMultiTime) {
-                                        // For multi-time sessions, open modal to select time slot
-                                        handleOpenModal(event)
+                                        // For multi-time sessions, open time slot modal
+                                        handleOpenTimeSlotModal(event)
                                       } else {
                                         handleAddToBooking(event.id)
                                       }
@@ -628,20 +635,23 @@ export default function ViewSwitcher() {
                       <div className="bg-slate-50 p-4 rounded-lg">
                         <h4 className="text-sm font-medium text-slate-900 mb-4">Your itinerary</h4>
                         {(() => {
-                          // Get all selected sessions and sort by date
-                          const selectedSessions = bookedSessions.map(booking => events.find(e => e.id === booking.eventId))
-                            .filter(Boolean)
-                            .sort((a, b) => new Date(a!.date).getTime() - new Date(b!.date).getTime())
+                          // Get all selected sessions with their booking data and sort by date
+                          const selectedSessionsWithBookings = bookedSessions.map(booking => ({
+                            session: events.find(e => e.id === booking.eventId)!,
+                            selectedTimeSlot: booking.selectedTimeSlot
+                          }))
+                            .filter(item => item.session)
+                            .sort((a, b) => new Date(a.session!.date).getTime() - new Date(b.session!.date).getTime())
 
                           // Group sessions by date
-                          const sessionsByDate = selectedSessions.reduce((groups, session) => {
-                            const date = session!.date
+                          const sessionsByDate = selectedSessionsWithBookings.reduce((groups, item) => {
+                            const date = item.session!.date
                             if (!groups[date]) {
                               groups[date] = []
                             }
-                            groups[date].push(session!)
+                            groups[date].push(item)
                             return groups
-                          }, {} as Record<string, typeof events>)
+                          }, {} as Record<string, typeof selectedSessionsWithBookings>)
 
                           return (
                             <div className="space-y-4">
@@ -656,21 +666,27 @@ export default function ViewSwitcher() {
                                     })}
                                   </h5>
                                   <div className="space-y-2">
-                                    {sessions.map((session) => (
-                                      <div key={session.id} className="flex items-center justify-between">
-                                        <div className="text-sm text-slate-900">
-                                          {session.title} ({session.time})
+                                    {sessions.map((item) => {
+                                      const session = item.session!
+                                      const displayTime = session.isMultiTime && item.selectedTimeSlot 
+                                        ? item.selectedTimeSlot 
+                                        : session.time
+                                      return (
+                                        <div key={session.id} className="flex items-center justify-between">
+                                          <div className="text-sm text-slate-900">
+                                            {session.title} ({displayTime})
+                                          </div>
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => handleRemoveFromBooking(session.id)}
+                                            className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700"
+                                          >
+                                            <X className="h-4 w-4" />
+                                          </Button>
                                         </div>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={() => handleRemoveFromBooking(session.id)}
-                                          className="h-6 w-6 p-0 text-slate-500 hover:text-slate-700"
-                                        >
-                                          <X className="h-4 w-4" />
-                                        </Button>
-                                      </div>
-                                    ))}
+                                      )
+                                    })}
                                   </div>
                                 </div>
                               ))}
@@ -717,6 +733,15 @@ export default function ViewSwitcher() {
           event: events.find(e => e.id === booking.eventId)!,
           selectedTimeSlot: booking.selectedTimeSlot
         })), getSelectedTimeSlot(selectedEvent.id)) : []}
+      />
+
+      {/* Time Slot Modal */}
+      <TimeSlotModal
+        event={selectedEvent}
+        isOpen={isTimeSlotModalOpen}
+        onClose={handleCloseTimeSlotModal}
+        onAddToBooking={(eventId, selectedTimeSlot) => handleAddToBooking(eventId, selectedTimeSlot)}
+        isBooked={selectedEvent ? isEventBooked(selectedEvent.id) : false}
       />
     </div>
   )
