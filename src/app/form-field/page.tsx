@@ -237,7 +237,7 @@ export default function FormFieldView() {
                     <Button variant="outline" size="icon" className="relative cursor-pointer">
                       <ListFilter className="h-4 w-4" />
                       {activeFilterCount > 0 && (
-                        <span className="absolute -top-1 -right-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
+                        <span className="absolute -top-2 -right-2 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
                           {activeFilterCount}
                         </span>
                       )}
@@ -422,7 +422,7 @@ export default function FormFieldView() {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={handleClearFilters}
-                          className="text-red-600"
+                          className="text-red-600 cursor-pointer"
                         >
                           Clear all filters
                         </DropdownMenuItem>
