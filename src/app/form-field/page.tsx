@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
 import SessionDetailModal from '@/components/ui/session-detail-modal'
+import TimeSlotModal from '@/components/ui/time-slot-modal'
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuCheckboxItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -37,6 +38,7 @@ export default function FormFieldView() {
   const [hideFullSessions, setHideFullSessions] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<typeof events[0] | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isTimeSlotModalOpen, setIsTimeSlotModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [filters, setFilters] = useState<FilterState>({
@@ -76,6 +78,16 @@ export default function FormFieldView() {
 
   const handleCloseModal = () => {
     setIsModalOpen(false)
+    setSelectedEvent(null)
+  }
+
+  const handleOpenTimeSlotModal = (event: typeof events[0]) => {
+    setSelectedEvent(event)
+    setIsTimeSlotModalOpen(true)
+  }
+
+  const handleCloseTimeSlotModal = () => {
+    setIsTimeSlotModalOpen(false)
     setSelectedEvent(null)
   }
 
@@ -177,12 +189,15 @@ export default function FormFieldView() {
     setCurrentPage(1)
   }
 
-  // Count active filters
-  const activeFilterCount = Object.values(filters).reduce((count, value) => {
+  // Count active filters (excluding sort)
+  const activeFilterCount = Object.entries(filters).reduce((count, [key, value]) => {
+    // Skip the sortBy field
+    if (key === 'sortBy') return count
+    
     if (Array.isArray(value)) {
       return count + value.length
     }
-    return count + (value && value !== 'date-asc' ? 1 : 0)
+    return count + (value ? 1 : 0)
   }, 0)
 
   return (
@@ -219,7 +234,7 @@ export default function FormFieldView() {
                 {/* Filter Dropdown */}
                 <DropdownMenu open={isFilterOpen} onOpenChange={setIsFilterOpen}>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="icon" className="relative">
+                    <Button variant="outline" size="icon" className="relative cursor-pointer">
                       <ListFilter className="h-4 w-4" />
                       {activeFilterCount > 0 && (
                         <span className="absolute -top-1 -right-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-700">
@@ -263,6 +278,7 @@ export default function FormFieldView() {
                                 checked={filters.tags.includes(tag)}
                                 onCheckedChange={(checked) => handleFilterChange('tags', tag, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {tag}
                               </DropdownMenuCheckboxItem>
@@ -276,6 +292,7 @@ export default function FormFieldView() {
                                 checked={filters.tags.includes(tag)}
                                 onCheckedChange={(checked) => handleFilterChange('tags', tag, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {tag}
                               </DropdownMenuCheckboxItem>
@@ -299,6 +316,7 @@ export default function FormFieldView() {
                                 checked={filters.dates.includes(date)}
                                 onCheckedChange={(checked) => handleFilterChange('dates', date, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {date}
                               </DropdownMenuCheckboxItem>
@@ -312,6 +330,7 @@ export default function FormFieldView() {
                                 checked={filters.dates.includes(date)}
                                 onCheckedChange={(checked) => handleFilterChange('dates', date, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {date}
                               </DropdownMenuCheckboxItem>
@@ -335,6 +354,7 @@ export default function FormFieldView() {
                                 checked={filters.locations.includes(location)}
                                 onCheckedChange={(checked) => handleFilterChange('locations', location, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {location}
                               </DropdownMenuCheckboxItem>
@@ -348,6 +368,7 @@ export default function FormFieldView() {
                                 checked={filters.locations.includes(location)}
                                 onCheckedChange={(checked) => handleFilterChange('locations', location, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {location}
                               </DropdownMenuCheckboxItem>
@@ -371,6 +392,7 @@ export default function FormFieldView() {
                                 checked={filters.types.includes(type)}
                                 onCheckedChange={(checked) => handleFilterChange('types', type, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {type}
                               </DropdownMenuCheckboxItem>
@@ -384,6 +406,7 @@ export default function FormFieldView() {
                                 checked={filters.types.includes(type)}
                                 onCheckedChange={(checked) => handleFilterChange('types', type, checked)}
                                 onSelect={(e) => e.preventDefault()}
+                                className="cursor-pointer"
                               >
                                 {type}
                               </DropdownMenuCheckboxItem>
@@ -411,7 +434,7 @@ export default function FormFieldView() {
                 {/* Sort Dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="gap-2">
+                    <Button variant="outline" className="gap-2 cursor-pointer">
                       <span>Sort</span>
                       <ChevronDown className="h-4 w-4" />
                     </Button>
@@ -419,34 +442,38 @@ export default function FormFieldView() {
                   <DropdownMenuContent align="start" className="w-48">
                     <DropdownMenuLabel>Sort sessions</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      checked={filters.sortBy === 'date-asc'}
-                      onCheckedChange={(checked) => checked && handleSortChange('date-asc')}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      Date (Earliest First)
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filters.sortBy === 'date-desc'}
-                      onCheckedChange={(checked) => checked && handleSortChange('date-desc')}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      Date (Latest First)
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filters.sortBy === 'time-asc'}
-                      onCheckedChange={(checked) => checked && handleSortChange('time-asc')}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      Time (Earliest First)
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={filters.sortBy === 'time-desc'}
-                      onCheckedChange={(checked) => checked && handleSortChange('time-desc')}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      Time (Latest First)
-                    </DropdownMenuCheckboxItem>
+                                            <DropdownMenuCheckboxItem
+                          checked={filters.sortBy === 'date-asc'}
+                          onCheckedChange={(checked) => checked && handleSortChange('date-asc')}
+                          onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
+                        >
+                          Date (Earliest First)
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={filters.sortBy === 'date-desc'}
+                          onCheckedChange={(checked) => checked && handleSortChange('date-desc')}
+                          onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
+                        >
+                          Date (Latest First)
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={filters.sortBy === 'time-asc'}
+                          onCheckedChange={(checked) => checked && handleSortChange('time-asc')}
+                          onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
+                        >
+                          Time (Earliest First)
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={filters.sortBy === 'time-desc'}
+                          onCheckedChange={(checked) => checked && handleSortChange('time-desc')}
+                          onSelect={(e) => e.preventDefault()}
+                          className="cursor-pointer"
+                        >
+                          Time (Latest First)
+                        </DropdownMenuCheckboxItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -569,8 +596,8 @@ export default function FormFieldView() {
                                 if (isEventBooked(event.id)) {
                                   handleRemoveFromBooking(event.id)
                                 } else if (event.isMultiTime) {
-                                  // For multi-time sessions, open modal to select time slot
-                                  handleOpenModal(event)
+                                  // For multi-time sessions, open time slot modal
+                                  handleOpenTimeSlotModal(event)
                                 } else {
                                   handleAddToBooking(event.id)
                                 }
@@ -892,6 +919,15 @@ export default function FormFieldView() {
             clashingSessions={[]}
           />
         )}
+
+        {/* Time Slot Modal */}
+        <TimeSlotModal
+          event={selectedEvent}
+          isOpen={isTimeSlotModalOpen}
+          onClose={handleCloseTimeSlotModal}
+          onAddToBooking={(eventId, selectedTimeSlot) => handleAddToBooking(eventId, selectedTimeSlot)}
+          isBooked={selectedEvent ? isEventBooked(selectedEvent.id) : false}
+        />
       </div>
     </div>
   )
