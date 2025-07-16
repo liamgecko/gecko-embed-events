@@ -54,7 +54,7 @@ export default function FormFieldView() {
     types: [],
     startTimes: []
   })
-  const sessionsPerPage = 10
+  const sessionsPerPage = viewMode === 'grid' ? 12 : 10
 
   const handleAddToBooking = (eventId: number, selectedTimeSlot?: string) => {
     setBookedSessions(prev => {
@@ -109,6 +109,14 @@ export default function FormFieldView() {
       return areAllSlotsFull(event)
     }
     return event.attendees === 0 && !event.waitlistSpaces
+  }
+
+  // Helper function to check if a session only has waitlist spaces available
+  const hasOnlyWaitlistSpaces = (event: typeof events[0]) => {
+    if (event.isMultiTime) {
+      return getTotalAvailableSlots(event) === 0 && event.waitlistSpaces && event.waitlistSpaces > 0
+    }
+    return event.attendees === 0 && event.waitlistSpaces && event.waitlistSpaces > 0
   }
 
   // Helper function to check if an event is booked
@@ -662,9 +670,11 @@ export default function FormFieldView() {
                               >
                                 {isEventBooked(event.id) 
                                   ? "Remove from booking" 
-                                  : isSessionFull(event) 
-                                    ? "Join waitlist" 
-                                    : "Add to booking"
+                                  : hasOnlyWaitlistSpaces(event)
+                                    ? "Join waitlist"
+                                    : isSessionFull(event)
+                                      ? "Session full"
+                                      : "Add to booking"
                                 }
                               </Button>
                             </div>
@@ -698,7 +708,7 @@ export default function FormFieldView() {
                               className={`object-cover ${shouldGrayOut(event) ? 'opacity-50' : ''}`}
                             />
                             {/* Status Badge */}
-                            {shouldGrayOut(event) && (
+                            {(shouldGrayOut(event) || hasOnlyWaitlistSpaces(event)) && (
                               <div className="absolute top-3 left-3">
                                 <Badge className={event.waitlistSpaces ? "bg-orange-100 text-orange-700 rounded-full font-bold" : "bg-pink-100 text-pink-700 rounded-full font-bold"}>
                                   {event.waitlistSpaces ? "Waitlist available" : "Session full"}
@@ -777,11 +787,11 @@ export default function FormFieldView() {
                             >
                               {isBooked
                                 ? "Remove from booking"
-                                : isSessionFull(event) 
-                                  ? event.waitlistSpaces 
-                                    ? "Join waitlist" 
-                                    : "Session full"
-                                  : "Add to booking"
+                                : hasOnlyWaitlistSpaces(event)
+                                  ? "Add to waitlist"
+                                  : isSessionFull(event)
+                                    ? "Session full"
+                                    : "Add to booking"
                               }
                             </Button>
                           </CardContent>
