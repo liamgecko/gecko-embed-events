@@ -1,9 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeft, ArrowRight, Clock, MapPin, Users, Video, CalendarX2, AlertTriangle, ListFilter, ChevronDown, Search, X } from 'lucide-react'
+import Image from 'next/image'
+import { ArrowLeft, ArrowRight, Clock, MapPin, Users, Video, CalendarX2, AlertTriangle, ListFilter, ChevronDown, Search, X, List, Grid3X3, Calendar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { getClashingSessions, getTotalAvailableSlots, areAllSlotsFull, filterEvents, getUniqueTags, getUniqueDates, getUniqueLocations, getUniqueTypes } from '@/lib/filter-utils'
 import { events, eventInfo } from '@/lib/events-data'
 import { useState } from 'react'
@@ -16,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 
 // Define the booking structure
 interface BookedSession {
@@ -41,6 +44,7 @@ export default function FormFieldView() {
   const [isTimeSlotModalOpen, setIsTimeSlotModalOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list")
   const [filters, setFilters] = useState<FilterState>({
     search: '',
     sortBy: 'date-asc',
@@ -487,6 +491,58 @@ export default function FormFieldView() {
                 <label htmlFor="hide-full" className="text-sm text-slate-600">
                   Hide full sessions
                 </label>
+                
+                {/* View Switcher */}
+                <div className="flex items-center space-x-1 bg-slate-100 rounded-sm p-1">
+                  {viewMode !== 'list' ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 px-3 py-1 rounded-sm text-sm font-medium focus:outline-none transition-colors cursor-pointer text-slate-600 hover:text-slate-900"
+                          aria-label="List view"
+                          onClick={() => setViewMode('list')}
+                        >
+                          <List className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Switch to list view</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 px-3 py-1 rounded-sm text-sm font-medium focus:outline-none transition-colors cursor-pointer bg-white shadow text-slate-900"
+                      aria-label="List view"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  )}
+                  {viewMode !== 'grid' ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-2 px-3 py-1 rounded-sm text-sm font-medium focus:outline-none transition-colors cursor-pointer text-slate-600 hover:text-slate-900"
+                          aria-label="Grid view"
+                          onClick={() => setViewMode('grid')}
+                        >
+                          <Grid3X3 className="w-4 h-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">Switch to grid view</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 px-3 py-1 rounded-sm text-sm font-medium focus:outline-none transition-colors cursor-pointer bg-white shadow text-slate-900"
+                      aria-label="Grid view"
+                      onClick={() => setViewMode('grid')}
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -499,60 +555,75 @@ export default function FormFieldView() {
               </Alert>
             ) : (
               <>
-                <div className="space-y-4">
-                  {paginatedEvents.map((event) => {
-                    const isBooked = isEventBooked(event.id)
-                    const selectedTimeSlot = getSelectedTimeSlot(event.id)
-                    const bookedSessionsWithSlots = bookedSessions.map(booking => ({
-                      event: events.find(e => e.id === booking.eventId)!,
-                      selectedTimeSlot: booking.selectedTimeSlot
-                    }))
-                    const clashingSessions = getClashingSessions(event, bookedSessionsWithSlots, selectedTimeSlot)
-                    const hasClash = clashingSessions.length > 0
-                    return (
-                      <div 
-                        key={event.id} 
-                        className={`flex items-center justify-between p-4 border rounded-lg ${
-                          hasClash && !isBooked ? 'border-orange-300 bg-orange-50' : 
-                          shouldGrayOut(event) ? 'border-slate-200 bg-slate-50' :
-                          'border-slate-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-slate-900">
-                              {new Date(event.date).getDate()}
-                            </div>
-                            <div className="text-xs text-slate-600 uppercase">
-                              {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
-                            </div>
-                          </div>
-                          <div>
-                            <h4 
-                              className="font-semibold text-slate-900 mb-1 cursor-pointer hover:underline"
-                              onClick={() => handleOpenModal(event)}
-                            >
-                              {event.title}
-                            </h4>
-                            <div className="flex sm:flex-row flex-col items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-600">
-                              <div className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
-                                <span>{event.time}</span>
+                {viewMode === 'list' ? (
+                  <div className="space-y-4">
+                    {paginatedEvents.map((event) => {
+                      const isBooked = isEventBooked(event.id)
+                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                      const bookedSessionsWithSlots = bookedSessions.map(booking => ({
+                        event: events.find(e => e.id === booking.eventId)!,
+                        selectedTimeSlot: booking.selectedTimeSlot
+                      }))
+                      const clashingSessions = getClashingSessions(event, bookedSessionsWithSlots, selectedTimeSlot)
+                      const hasClash = clashingSessions.length > 0
+                      return (
+                        <div 
+                          key={event.id} 
+                          className={`flex items-center justify-between p-4 border rounded-lg ${
+                            hasClash && !isBooked ? 'border-orange-300 bg-orange-50' : 
+                            shouldGrayOut(event) ? 'border-slate-200 bg-slate-50' :
+                            'border-slate-200'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="text-center">
+                              <div className="text-lg font-bold text-slate-900">
+                                {new Date(event.date).getDate()}
                               </div>
-                              <div className="flex items-center gap-1">
-                                {event.type === "Online" ? (
-                                  <>
-                                    <Video className="w-4 h-4" />
-                                    <span>Online</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <MapPin className="w-4 h-4" />
-                                    <span>{event.location}</span>
-                                  </>
-                                )}
+                              <div className="text-xs text-slate-600 uppercase">
+                                {new Date(event.date).toLocaleDateString('en-US', { month: 'short' })}
                               </div>
-                              <div className="hidden xl:flex items-center gap-1">
+                            </div>
+                            <div>
+                              <h4 
+                                className="font-semibold text-slate-900 mb-1 cursor-pointer hover:underline"
+                                onClick={() => handleOpenModal(event)}
+                              >
+                                {event.title}
+                              </h4>
+                              <div className="flex sm:flex-row flex-col items-start sm:items-center gap-2 sm:gap-4 text-sm text-slate-600">
+                                <div className="flex items-center gap-1">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{event.time}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  {event.type === "Online" ? (
+                                    <>
+                                      <Video className="w-4 h-4" />
+                                      <span>Online</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MapPin className="w-4 h-4" />
+                                      <span>{event.location}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <div className="hidden xl:flex items-center gap-1">
+                                  <Users className="w-4 h-4" />
+                                  <span>
+                                    {event.isMultiTime 
+                                      ? `${getTotalAvailableSlots(event)} spaces available`
+                                      : event.attendees === 0 
+                                        ? event.waitlistSpaces 
+                                          ? `${event.waitlistSpaces} waitlist spaces` 
+                                          : "Session full"
+                                        : `${event.attendees} spaces available`
+                                    }
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex xl:hidden items-center gap-1 text-sm text-slate-600 mt-4">
                                 <Users className="w-4 h-4" />
                                 <span>
                                   {event.isMultiTime 
@@ -565,35 +636,136 @@ export default function FormFieldView() {
                                   }
                                 </span>
                               </div>
+                              {hasClash && !isBooked && (
+                                <div className="flex items-center gap-1 text-xs text-orange-700 mt-3">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  <span>Time clash with booked session</span>
+                                </div>
+                              )}
                             </div>
-                            <div className="flex xl:hidden items-center gap-1 text-sm text-slate-600 mt-4">
-                              <Users className="w-4 h-4" />
-                              <span>
-                                {event.isMultiTime 
-                                  ? `${getTotalAvailableSlots(event)} spaces available`
-                                  : event.attendees === 0 
-                                    ? event.waitlistSpaces 
-                                      ? `${event.waitlistSpaces} waitlist spaces` 
-                                      : "Session full"
-                                    : `${event.attendees} spaces available`
+                          </div>
+                          {(!isSessionFull(event) || event.waitlistSpaces) && (
+                            <div className="flex items-center gap-3">
+                              <Button 
+                                size="sm" 
+                                variant={isSessionFull(event) ? "secondary" : "default"}
+                                onClick={() => {
+                                  if (isEventBooked(event.id)) {
+                                    handleRemoveFromBooking(event.id)
+                                  } else if (event.isMultiTime) {
+                                    // For multi-time sessions, open time slot modal
+                                    handleOpenTimeSlotModal(event)
+                                  } else {
+                                    handleAddToBooking(event.id)
+                                  }
+                                }}
+                              >
+                                {isEventBooked(event.id) 
+                                  ? "Remove from booking" 
+                                  : isSessionFull(event) 
+                                    ? "Join waitlist" 
+                                    : "Add to booking"
                                 }
-                              </span>
+                              </Button>
                             </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                    {paginatedEvents.map((event) => {
+                      const isBooked = isEventBooked(event.id)
+                      const selectedTimeSlot = getSelectedTimeSlot(event.id)
+                      const bookedSessionsWithSlots = bookedSessions.map(booking => ({
+                        event: events.find(e => e.id === booking.eventId)!,
+                        selectedTimeSlot: booking.selectedTimeSlot
+                      }))
+                      const clashingSessions = getClashingSessions(event, bookedSessionsWithSlots, selectedTimeSlot)
+                      const hasClash = clashingSessions.length > 0
+                      return (
+                        <Card 
+                          key={event.id}
+                          className={`overflow-hidden ${hasClash && !isBooked ? 'border-orange-300' : ''}`}
+                        >
+                          {/* Image */}
+                          <div className="relative h-40">
+                            <Image 
+                              src={event.image || '/placeholder-image.jpg'} 
+                              alt={event.title}
+                              fill
+                              className={`object-cover ${shouldGrayOut(event) ? 'opacity-50' : ''}`}
+                            />
+                            {/* Status Badge */}
+                            {shouldGrayOut(event) && (
+                              <div className="absolute top-3 left-3">
+                                <Badge className={event.waitlistSpaces ? "bg-orange-100 text-orange-700 rounded-full font-bold" : "bg-pink-100 text-pink-700 rounded-full font-bold"}>
+                                  {event.waitlistSpaces ? "Waitlist available" : "Session full"}
+                                </Badge>
+                              </div>
+                            )}
+                            {/* Clash Warning Bar */}
                             {hasClash && !isBooked && (
-                              <div className="flex items-center gap-1 text-xs text-orange-700 mt-3">
-                                <AlertTriangle className="w-4 h-4" />
-                                <span>Time clash with booked session</span>
+                              <div className="absolute bottom-0 left-0 right-0 bg-orange-100 text-orange-700 text-center py-1 px-2 text-xs font-medium">
+                                Time clash with booked session
                               </div>
                             )}
                           </div>
-                        </div>
-                        {(!isSessionFull(event) || event.waitlistSpaces) && (
-                          <div className="flex items-center gap-3">
+
+                          {/* Content */}
+                          <CardContent className="p-6 flex flex-col flex-1">
+                            <div className="flex-1">
+                              <div className="mb-3">
+                                <CardTitle 
+                                  className="text-base line-clamp-2 mb-2 leading-tight cursor-pointer hover:underline"
+                                  onClick={() => handleOpenModal(event)}
+                                >
+                                  {event.title}
+                                </CardTitle>
+                              </div>
+
+                              <p className="text-slate-600 text-sm mb-4">
+                                {event.description}
+                              </p>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-slate-600 text-sm">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>{new Date(event.date).toLocaleDateString('en-US', { 
+                                    weekday: 'short', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                  })}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600 text-sm">
+                                  <Clock className="w-4 h-4" />
+                                  <span>{event.time}</span>
+                                </div>
+                                <div className="flex items-center gap-2 text-slate-600 text-sm">
+                                  {event.type === "Online" ? (
+                                    <>
+                                      <Video className="w-4 h-4" />
+                                      <span>Online</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <MapPin className="w-4 h-4" />
+                                      <span className="truncate">{event.location}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
                             <Button 
                               size="sm" 
-                              variant={isSessionFull(event) ? "secondary" : "default"}
+                              className="w-full mt-4"
+                              variant={isSessionFull(event) ? "secondary" : isBooked ? "outline" : "default"}
+                              disabled={isSessionFull(event) && !event.waitlistSpaces}
                               onClick={() => {
-                                if (isEventBooked(event.id)) {
+                                if (isSessionFull(event) && !event.waitlistSpaces) return
+                                if (isBooked) {
                                   handleRemoveFromBooking(event.id)
                                 } else if (event.isMultiTime) {
                                   // For multi-time sessions, open time slot modal
@@ -603,19 +775,21 @@ export default function FormFieldView() {
                                 }
                               }}
                             >
-                              {isEventBooked(event.id) 
-                                ? "Remove from booking" 
+                              {isBooked
+                                ? "Remove from booking"
                                 : isSessionFull(event) 
-                                  ? "Join waitlist" 
+                                  ? event.waitlistSpaces 
+                                    ? "Join waitlist" 
+                                    : "Session full"
                                   : "Add to booking"
                               }
                             </Button>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
+                  </div>
+                )}
 
                 {/* Session count and pagination */}
                 <div className="mt-6 flex items-center justify-between">
